@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RouteWise - Smart Travel Route Optimizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">RouteWise</div>
+    <span>Graph-based travel intelligence</span>
+</header>
+
+<main class="container">
+    <section class="hero">
+        <div>
+            <p class="eyebrow">SMART TRAVEL PLANNING</p>
+            <h1>Smart Travel<br>Route Optimizer</h1>
+            <p class="subtitle">Compare routes by distance, travel time and estimated cost.</p>
+            <div class="stats">
+                <div><strong>{{ cities|length }}</strong><span>Connected Cities</span></div>
+                <div><strong>4</strong><span>Core Algorithms</span></div>
+            </div>
+        </div>
+
+        <form class="planner" method="POST">
+            <h2>Plan a Route</h2>
+            <label for="source">Source City</label>
+            <select id="source" name="source" required>
+                <option value="">Select source</option>
+                {% for city in cities %}
+                <option value="{{ city }}" {% if selected_source == city %}selected{% endif %}>{{ city }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="destination">Destination City</label>
+            <select id="destination" name="destination" required>
+                <option value="">Select destination</option>
+                {% for city in cities %}
+                <option value="{{ city }}" {% if selected_destination == city %}selected{% endif %}>{{ city }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="budget">Budget (optional, ₹)</label>
+            <input id="budget" name="budget" type="number" min="0" step="1"
+                   placeholder="e.g. 5000" value="{{ budget }}">
+
+            <label for="max_stops">Maximum Stops</label>
+            <input id="max_stops" name="max_stops" type="number" min="1" max="20"
+                   value="{{ max_stops }}">
+
+            <button type="submit">Optimize Route</button>
+        </form>
+    </section>
+
+    {% if error %}
+    <div class="alert">{{ error }}</div>
+    {% endif %}
+
+    {% if results %}
+    <section class="section">
+        <div class="section-heading">
+            <div><p class="eyebrow">YOUR RESULTS</p><h2>Results Dashboard</h2></div>
+            <span class="pill">{{ results.route_count }} routes explored</span>
+        </div>
+
+        <div class="summary-grid">
+            <article class="result-card blue">
+                <span>Shortest Route</span>
+                <h3>{{ results.shortest_route.path_text }}</h3>
+                <p>{{ results.shortest_route.distance }} km · {{ results.shortest_route.time }} hrs · ₹{{ results.shortest_route.cost }}</p>
+            </article>
+            <article class="result-card orange">
+                <span>Cheapest Route</span>
+                <h3>{{ results.cheapest_route.path_text }}</h3>
+                <p>{{ results.cheapest_route.distance }} km · {{ results.cheapest_route.time }} hrs · ₹{{ results.cheapest_route.cost }}</p>
+            </article>
+            <article class="result-card green">
+                <span>Budget-Optimized Route</span>
+                {% if results.budget_route %}
+                <h3>{{ results.budget_route.path_text }}</h3>
+                <p>{{ results.budget_route.distance }} km · {{ results.budget_route.time }} hrs · ₹{{ results.budget_route.cost }}</p>
+                {% elif results.budget_checked %}
+                <h3>No route within budget</h3><p>Try increasing your budget.</p>
+                {% else %}
+                <h3>Budget not provided</h3><p>Enter a budget to see this result.</p>
+                {% endif %}
+            </article>
+        </div>
+    </section>
+
+    <section class="two-columns section">
+        <div class="panel">
+            <h2>Top Routes by Cost</h2>
+            {% for route in results.routes_by_cost %}
+            <div class="route-row">
+                <strong>{{ route.path_text }}</strong>
+                <span>₹{{ route.cost }} · {{ route.distance }} km</span>
+            </div>
+            {% else %}<p>No alternative routes found.</p>{% endfor %}
+        </div>
+        <div class="panel">
+            <h2>Top Routes by Time</h2>
+            {% for route in results.routes_by_time %}
+            <div class="route-row">
+                <strong>{{ route.path_text }}</strong>
+                <span>{{ route.time }} hrs · ₹{{ route.cost }}</span>
+            </div>
+            {% else %}<p>No alternative routes found.</p>{% endfor %}
+        </div>
+    </section>
+
+    <section class="section panel">
+        <h2>Algorithm Overview</h2>
+        <div class="algorithm-grid">
+            <div><h3>Dijkstra</h3><p>Finds the shortest or lowest-weight route.</p></div>
+            <div><h3>Kruskal</h3><p>Builds a minimum-cost network across cities.</p></div>
+            <div><h3>Dynamic Programming</h3><p>Budget route selection reuses computed route candidates.</p></div>
+            <div><h3>Quick Sort / Merge Sort</h3><p>Ranks alternative routes and network edges.</p></div>
+        </div>
+    </section>
+
+    <section class="section panel">
+        <h2>Travel Graph: Route Time vs Number of Stops</h2>
+        <div class="chart">
+            <div class="chart-axis"><span>Travel time (hours)</span></div>
+            <div class="bars">
+                {% for point in results.chart_points %}
+                <div class="bar-item">
+                    <div class="bar" style="height: {{ [point.time * 5, 12]|max }}px"></div>
+                    <small>{{ point.nodes }} cities</small>
+                    <small>{{ point.time }} hrs</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <p class="muted">Illustrative comparison based on the sample route data.</p>
+    </section>
+
+    <section class="section panel">
+        <h2>Minimum Cost Network (Kruskal Output)</h2>
+        <div class="network-grid">
+            {% for edge in results.network_edges %}
+            <div class="network-card">
+                <strong>{{ edge.source }} to {{ edge.destination }}</strong>
+                <span>Cost: ₹{{ edge.cost }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="total">Total network cost: ₹{{ results.network_total_cost }}</p>
+    </section>
+    {% endif %}
+    <footer>RouteWise · Smart Travel Route Optimizer · Sample data is simulated</footer>
+</main>
+</body>
+</html>
